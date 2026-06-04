@@ -104,7 +104,8 @@ export async function runScan(
   config: ProviderConfig,
   onLog: EmitFn,
   onProgress: ProgressFn,
-): Promise<{ findings: Finding[]; filesScanned: number; fileResults: FileResult[] }> {
+  shouldStop?: () => boolean,
+): Promise<{ findings: Finding[]; filesScanned: number; fileResults: FileResult[]; cancelled?: boolean; pct?: number }> {
   const allFindings: Finding[] = [];
 
   onProgress({ pct: 0, phase: `Connecting to ${config.provider}...` });
@@ -180,6 +181,15 @@ export async function runScan(
     };
   }
 
+  // Helper to return partial results when cancelled
+  function partialResult(pct: number) {
+    const enriched = dedup(allFindings).map(enrichWithFix);
+    onLog({ text: '🛑 Scan cancelled — showing partial results.', type: 'warning' });
+    onProgress({ pct, phase: 'Scan cancelled' });
+    return { findings: enriched, filesScanned: fetchableFiles.length, fileResults: buildFileResults(files, enriched), cancelled: true, pct };
+  }
+
+  if (shouldStop?.()) return partialResult(30);
   onProgress({ pct: 30, phase: 'Running retire.js...' });
   try {
     const retireFindings = await retireScanner(fetchableFiles, onLog);
@@ -188,6 +198,7 @@ export async function runScan(
     onLog({ text: `⚠ retire.js scanner error: ${(e as Error).message}`, type: 'warning' });
   }
 
+  if (shouldStop?.()) return partialResult(45);
   onProgress({ pct: 45, phase: 'Scanning for GSAP vulnerabilities...' });
   try {
     const gsapFindings = await gsapScanner(fetchableFiles, onLog);
@@ -196,6 +207,7 @@ export async function runScan(
     onLog({ text: `⚠ GSAP scanner error: ${(e as Error).message}`, type: 'warning' });
   }
 
+  if (shouldStop?.()) return partialResult(55);
   onProgress({ pct: 55, phase: 'Querying OSV.dev for additional CVEs...' });
   try {
     const osvFindings = await osvScanner(allFindings, onLog);
@@ -204,6 +216,7 @@ export async function runScan(
     onLog({ text: `⚠ OSV scanner error: ${(e as Error).message}`, type: 'warning' });
   }
 
+  if (shouldStop?.()) return partialResult(70);
   onProgress({ pct: 70, phase: 'Checking Subresource Integrity...' });
   if (config.provider === 'publicUrl') {
     const htmlFile = files.find((f) => f.path === '__html__');
@@ -221,6 +234,7 @@ export async function runScan(
     onLog({ text: '🔗  SRI check: skipped (applies to Public URL mode only).', type: 'info' });
   }
 
+  if (shouldStop?.()) return partialResult(80);
   onProgress({ pct: 80, phase: 'Scanning for hardcoded secrets...' });
   try {
     const secretFindings = await secretsScanner(fetchableFiles, onLog);

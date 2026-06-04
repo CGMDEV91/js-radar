@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type { View, ProviderConfig, Finding, LogMessage, ScanProgress, FileResult } from './types';
 import { HomeView } from './components/views/HomeView';
 import { ScanningView } from './components/views/ScanningView';
@@ -15,8 +15,12 @@ export default function App() {
   const [progress, setProgress] = useState<ScanProgress>(INITIAL_PROGRESS);
   const [filesScanned, setFilesScanned] = useState(0);
   const [fileResults, setFileResults] = useState<FileResult[]>([]);
+  const [cancelled, setCancelled] = useState(false);
+  const cancelledRef = useRef(false);
 
   function resetAll() {
+    cancelledRef.current = false;
+    setCancelled(false);
     setView('home');
     setConfig(null);
     setFindings([]);
@@ -26,7 +30,13 @@ export default function App() {
     setFileResults([]);
   }
 
+  function handleStop() {
+    cancelledRef.current = true;
+  }
+
   const handleStartScan = useCallback(async (cfg: ProviderConfig) => {
+    cancelledRef.current = false;
+    setCancelled(false);
     setConfig(cfg);
     setLogs([]);
     setFindings([]);
@@ -39,10 +49,14 @@ export default function App() {
     const onProgress = (p: ScanProgress) => setProgress(p);
 
     try {
-      const result = await runScan(cfg, emit, onProgress);
+      const result = await runScan(cfg, emit, onProgress, () => cancelledRef.current);
       setFindings(result.findings);
       setFilesScanned(result.filesScanned);
       setFileResults(result.fileResults);
+      if (result.cancelled) {
+        setCancelled(true);
+        setProgress({ pct: result.pct ?? 50, phase: 'Scan cancelled' });
+      }
     } catch (e) {
       emit({ text: `❌ Scan failed: ${(e as Error).message}`, type: 'error' });
       setProgress({ pct: 100, phase: 'Scan failed' });
@@ -61,6 +75,7 @@ export default function App() {
         progress={progress}
         onStartOver={resetAll}
         onViewResults={() => setView('results')}
+        onStop={handleStop}
       />
     );
   }
@@ -73,6 +88,7 @@ export default function App() {
         filesScanned={filesScanned}
         fileResults={fileResults}
         logs={logs}
+        cancelled={cancelled}
         onScanAnother={resetAll}
         onRetry={handleStartScan}
       />

@@ -462,13 +462,25 @@ export function HomeView({ onStartScan }: Props) {
                       placeholder="https://example.com" value={siteUrl}
                       onChange={e => setSiteUrl(e.target.value)} autoComplete="off" spellCheck={false} />
                   </div>
+
+                  {/* CORS proxy — always visible */}
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', marginBottom: '14px' }}>
+                    <input type="checkbox" checked={corsProxy} onChange={e => setCorsProxy(e.target.checked)}
+                      style={{ marginTop: '3px', accentColor: 'var(--accent-green)', flexShrink: 0 }} />
+                    <span>
+                      <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>Use CORS proxy</span><br />
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.5' }}>Routes requests through a proxy to bypass browser CORS restrictions. Enable this if the scan fails to fetch the page. No credentials are sent.</span>
+                    </span>
+                  </label>
+
+                  {/* Advanced options */}
                   <button type="button" onClick={() => setShowAdvanced(s => !s)}
                     style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', padding: '0', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <span style={{ fontSize: '9px', transform: showAdvanced ? 'rotate(90deg)' : 'none', transition: '150ms', display: 'inline-block' }}>▶</span>
                     Advanced options
                   </button>
                   {showAdvanced && (
-                    <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
                       <div>
                         <label htmlFor="additional-paths" style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 500 }}>
                           Additional JS file URLs <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(one per line)</span>
@@ -478,14 +490,6 @@ export function HomeView({ onStartScan }: Props) {
                           value={additionalPaths} onChange={e => setAdditionalPaths(e.target.value)}
                           autoComplete="off" spellCheck={false} style={{ resize: 'vertical', fontSize: '12px' }} />
                       </div>
-                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={corsProxy} onChange={e => setCorsProxy(e.target.checked)}
-                          style={{ marginTop: '2px', accentColor: 'var(--accent-green)', flexShrink: 0 }} />
-                        <span>
-                          <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>Use CORS proxy (corsproxy.io)</span><br />
-                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.5' }}>Bypasses CORS restrictions. File URLs visible to corsproxy.io. No credentials sent.</span>
-                        </span>
-                      </label>
                     </div>
                   )}
                 </>
