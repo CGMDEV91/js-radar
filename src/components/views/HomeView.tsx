@@ -31,6 +31,7 @@ function JSRadarLogo({ height = 40 }: { height?: number }) {
 
 interface Props {
   onStartScan: (config: ProviderConfig) => void;
+  onShowDisclaimer: () => void;
 }
 
 const PLACEHOLDERS: Record<Provider, string> = {
@@ -101,7 +102,7 @@ const SCANNER_DETAILS = [
       'Vulnerability classes covered: prototype pollution, cross-site scripting (XSS), command injection, path traversal, and remote code execution in specific version ranges',
       'Libraries are fingerprinted from filename patterns, inline version comments, and version strings embedded in minified files',
     ],
-    how: 'At scan time the engine fetches the retire.js vulnerability database — a live-maintained JSON file from GitHub — and runs each JS file against a set of fingerprint rules. A library is flagged when its detected version falls within a known vulnerable range (defined by "atOrAbove" and "below" fields in the database). Every finding is mapped to one or more CVE identifiers with severity levels sourced from the National Vulnerability Database (NVD).',
+    how: 'At scan time the engine fetches the retire.js vulnerability database (a live-maintained JSON file from GitHub) and runs each JS file against a set of fingerprint rules. A library is flagged when its detected version falls within a known vulnerable range (defined by "atOrAbove" and "below" fields in the database). Every finding is mapped to one or more CVE identifiers with severity levels sourced from the National Vulnerability Database (NVD).',
     examples: [
       { cve: 'CVE-2019-11358', detail: 'jQuery < 3.4.0 · Prototype pollution via $.extend' },
       { cve: 'CVE-2019-8331', detail: 'Bootstrap < 4.3.1 · XSS via data-template attribute' },
@@ -114,7 +115,7 @@ const SCANNER_DETAILS = [
     bg: 'rgba(248,113,113,0.08)',
     border: 'rgba(248,113,113,0.18)',
     name: 'GSAP CVE-2020-28478',
-    tagline: 'Prototype pollution — targeted scanner',
+    tagline: 'Prototype pollution - targeted scanner',
     source: 'NVD · CVE-2020-28478',
     sourceLabel: 'Port of original PoC',
     coverage: 'GSAP < 3.6.0',
@@ -162,7 +163,7 @@ const SCANNER_DETAILS = [
     what: [
       'External <script src> and <link rel="stylesheet"> tags that load from third-party CDNs (cdnjs, jsDelivr, unpkg, polyfill.io, and others) without a valid integrity attribute',
       'Missing crossorigin="anonymous" attribute, which is required for SRI enforcement to work correctly in browsers',
-      'Explicit detection of polyfill.io and cdn.polyfill.io — the CDN compromised in the 2024 supply-chain attack that injected malware into 100,000+ websites',
+      'Explicit detection of polyfill.io and cdn.polyfill.io, the CDN compromised in the 2024 supply-chain attack that injected malware into 100,000+ websites',
     ],
     how: 'The scanner parses the raw HTML of the target page and extracts all <script> and <link> tags with external src/href attributes. For each tag it checks for the presence of a valid integrity attribute (e.g. integrity="sha384-...") and a crossorigin attribute. Tags without SRI are flagged with medium severity. Without SRI, a compromised CDN or domain hijack silently delivers malicious code to every user of the page, bypassing HTTPS.',
     examples: [
@@ -217,8 +218,9 @@ const STEPS = [
   },
 ];
 
-export function HomeView({ onStartScan }: Props) {
+export function HomeView({ onStartScan, onShowDisclaimer }: Props) {
   const [provider, setProvider] = useState<Provider>('github');
+  const [repoVisibility, setRepoVisibility] = useState<'public' | 'private'>('public');
   const [token, setToken] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
   const [siteUrl, setSiteUrl] = useState('');
@@ -228,6 +230,7 @@ export function HomeView({ onStartScan }: Props) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showTokenSuggestions, setShowTokenSuggestions] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const tokenInputRef = useRef<HTMLDivElement>(null);
 
   const savedTokens = getTokens(provider);
@@ -244,17 +247,30 @@ export function HomeView({ onStartScan }: Props) {
   }, []);
 
   const isPublic = provider === 'publicUrl';
-  const canSubmit = isPublic
+  const needsToken = !isPublic && repoVisibility === 'private';
+  const hasUrl = isPublic
     ? siteUrl.trim().length > 0 || additionalPaths.trim().length > 0
     : repoUrl.trim().length > 0;
+  const canSubmit = termsAccepted && hasUrl;
+
+  function handleProviderChange(p: Provider) {
+    setProvider(p);
+    setToken('');
+    setRepoUrl('');
+    setSiteUrl('');
+    setAdditionalPaths('');
+    setCorsProxy(false);
+    setShowAdvanced(false);
+    setRepoVisibility('public');
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
-    if (!isPublic && token.trim()) saveToken(provider, token.trim());
+    if (needsToken && token.trim()) saveToken(provider, token.trim());
     onStartScan({
       provider,
-      token: isPublic ? undefined : token || undefined,
+      token: needsToken ? token || undefined : undefined,
       repoUrl: isPublic ? undefined : repoUrl,
       siteUrl: isPublic ? siteUrl || undefined : undefined,
       additionalPaths: isPublic ? additionalPaths || undefined : undefined,
@@ -312,6 +328,14 @@ export function HomeView({ onStartScan }: Props) {
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}>
               How it works
             </a>
+            <button
+              type="button"
+              onClick={onShowDisclaimer}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', padding: '0' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent-amber)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}>
+              Legal
+            </button>
             <a href="#scan" className="btn-primary" style={{ padding: '7px 16px', fontSize: '13px' }}>
               Start scanning
             </a>
@@ -362,6 +386,12 @@ export function HomeView({ onStartScan }: Props) {
               style={{ fontSize: '15px', color: 'var(--text-secondary)', textDecoration: 'none' }}>
               How it works
             </a>
+            <button
+              type="button"
+              onClick={() => { setMenuOpen(false); onShowDisclaimer(); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', color: 'var(--accent-amber)', padding: '0', textAlign: 'left' }}>
+              Legal
+            </button>
             <a href="#scan" onClick={() => setMenuOpen(false)}
               className="btn-primary"
               style={{ textAlign: 'center', fontSize: '14px', padding: '10px 16px', textDecoration: 'none' }}>
@@ -445,11 +475,10 @@ export function HomeView({ onStartScan }: Props) {
         <div id="scan" style={{ maxWidth: '580px', margin: '0 auto' }}>
           <div className="card" style={{ padding: '28px', textAlign: 'left' }}>
             <form onSubmit={handleSubmit}>
+
+              {/* Provider */}
               <div style={{ marginBottom: '20px' }}>
-                <ProviderSelector
-                  selected={provider}
-                  onChange={p => { setProvider(p); setToken(''); setRepoUrl(''); setSiteUrl(''); setAdditionalPaths(''); setCorsProxy(false); setShowAdvanced(false); }}
-                />
+                <ProviderSelector selected={provider} onChange={handleProviderChange} />
               </div>
 
               {isPublic ? (
@@ -463,7 +492,6 @@ export function HomeView({ onStartScan }: Props) {
                       onChange={e => setSiteUrl(e.target.value)} autoComplete="off" spellCheck={false} />
                   </div>
 
-                  {/* CORS proxy — always visible */}
                   <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', marginBottom: '14px' }}>
                     <input type="checkbox" checked={corsProxy} onChange={e => setCorsProxy(e.target.checked)}
                       style={{ marginTop: '3px', accentColor: 'var(--accent-green)', flexShrink: 0 }} />
@@ -473,7 +501,6 @@ export function HomeView({ onStartScan }: Props) {
                     </span>
                   </label>
 
-                  {/* Advanced options */}
                   <button type="button" onClick={() => setShowAdvanced(s => !s)}
                     style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', padding: '0', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <span style={{ fontSize: '9px', transform: showAdvanced ? 'rotate(90deg)' : 'none', transition: '150ms', display: 'inline-block' }}>▶</span>
@@ -481,80 +508,97 @@ export function HomeView({ onStartScan }: Props) {
                   </button>
                   {showAdvanced && (
                     <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
-                      <div>
-                        <label htmlFor="additional-paths" style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 500 }}>
-                          Additional JS file URLs <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(one per line)</span>
-                        </label>
-                        <textarea id="additional-paths" className="input-field input-mono" rows={3}
-                          placeholder="https://example.com/themes/custom/js/lib.min.js"
-                          value={additionalPaths} onChange={e => setAdditionalPaths(e.target.value)}
-                          autoComplete="off" spellCheck={false} style={{ resize: 'vertical', fontSize: '12px' }} />
-                      </div>
+                      <label htmlFor="additional-paths" style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 500 }}>
+                        Additional JS file URLs <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(one per line)</span>
+                      </label>
+                      <textarea id="additional-paths" className="input-field input-mono" rows={3}
+                        placeholder="https://example.com/themes/custom/js/lib.min.js"
+                        value={additionalPaths} onChange={e => setAdditionalPaths(e.target.value)}
+                        autoComplete="off" spellCheck={false} style={{ resize: 'vertical', fontSize: '12px' }} />
                     </div>
                   )}
                 </>
               ) : (
                 <>
-                  <div style={{ marginBottom: '14px' }} ref={tokenInputRef}>
-                    <label htmlFor="access-token" style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Personal Access Token
-                      {savedTokens.length > 0 && (
-                        <button type="button" onClick={() => setShowTokenSuggestions(s => !s)}
-                          style={{ marginLeft: '8px', background: 'rgba(110,231,183,0.10)', border: '1px solid rgba(110,231,183,0.25)', borderRadius: '4px', color: 'var(--accent-green)', fontSize: '10px', padding: '1px 7px', cursor: 'pointer', fontWeight: 600, letterSpacing: '0.3px', textTransform: 'none' }}>
-                          {savedTokens.length} saved ▾
-                        </button>
-                      )}
-                    </label>
-
-                    {/* Saved token suggestions dropdown */}
-                    {showTokenSuggestions && savedTokens.length > 0 && (
-                      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '8px', overflow: 'hidden' }}>
-                        {savedTokens.map((st, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderBottom: i < savedTokens.length - 1 ? '1px solid var(--border)' : 'none', gap: '8px' }}>
-                            <button type="button"
-                              onClick={() => { setToken(st.token); setShowTokenSuggestions(false); }}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', padding: '0', textAlign: 'left', flex: 1 }}>
-                              {st.label}
-                            </button>
-                            <button type="button"
-                              onClick={() => { deleteToken(provider, st.token); setShowTokenSuggestions(false); if (token === st.token) setToken(''); }}
-                              title="Remove saved token"
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', padding: '0 2px', lineHeight: 1 }}>
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div style={{ position: 'relative' }}>
-                      <input id="access-token" type={showToken ? 'text' : 'password'}
-                        className="input-field input-mono"
-                        placeholder="••••••••••••••••••••••••••••••••"
-                        value={token} onChange={e => setToken(e.target.value)}
-                        autoComplete="off" spellCheck={false} style={{ paddingRight: '44px' }} />
-                      <button type="button" aria-label={showToken ? 'Hide token' : 'Show token'}
-                        onClick={() => setShowToken(s => !s)}
-                        style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center' }}>
-                        {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
-                      </button>
-                    </div>
-                    {TOKEN_HELP[provider] && (
-                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', lineHeight: '1.5' }}>{TOKEN_HELP[provider]}</p>
-                    )}
-                    <p style={{
-                      fontSize: '11px',
-                      color: 'var(--text-muted)',
-                      marginTop: '6px',
-                      lineHeight: '1.5',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '5px',
-                    }}>
-                      <span style={{ color: 'var(--accent-green)', flexShrink: 0 }}>🔒</span>
-                      Tokens are saved only in your browser (localStorage) to speed up future scans. You can remove them at any time using the saved list above.
+                  {/* Public / Private toggle */}
+                  <div style={{ marginBottom: '18px' }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Repository visibility
                     </p>
+                    <div style={{ display: 'flex', gap: '0', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '3px', width: 'fit-content' }}>
+                      {(['public', 'private'] as const).map(v => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => { setRepoVisibility(v); setToken(''); }}
+                          style={{
+                            padding: '6px 18px', fontSize: '13px', fontWeight: 500, border: 'none', borderRadius: '6px', cursor: 'pointer', transition: 'background 150ms, color 150ms',
+                            background: repoVisibility === v ? (v === 'private' ? 'rgba(167,139,250,0.18)' : 'rgba(110,231,183,0.15)') : 'transparent',
+                            color: repoVisibility === v ? (v === 'private' ? '#a78bfa' : 'var(--accent-green)') : 'var(--text-muted)',
+                          }}
+                        >
+                          {v === 'public' ? 'Public' : 'Private'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Token field — only for private */}
+                  {needsToken && (
+                    <div style={{ marginBottom: '14px' }} ref={tokenInputRef}>
+                      <label htmlFor="access-token" style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Personal Access Token
+                        {savedTokens.length > 0 && (
+                          <button type="button" onClick={() => setShowTokenSuggestions(s => !s)}
+                            style={{ marginLeft: '8px', background: 'rgba(110,231,183,0.10)', border: '1px solid rgba(110,231,183,0.25)', borderRadius: '4px', color: 'var(--accent-green)', fontSize: '10px', padding: '1px 7px', cursor: 'pointer', fontWeight: 600, letterSpacing: '0.3px', textTransform: 'none' }}>
+                            {savedTokens.length} saved ▾
+                          </button>
+                        )}
+                      </label>
+
+                      {showTokenSuggestions && savedTokens.length > 0 && (
+                        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '8px', overflow: 'hidden' }}>
+                          {savedTokens.map((st, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderBottom: i < savedTokens.length - 1 ? '1px solid var(--border)' : 'none', gap: '8px' }}>
+                              <button type="button"
+                                onClick={() => { setToken(st.token); setShowTokenSuggestions(false); }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', padding: '0', textAlign: 'left', flex: 1 }}>
+                                {st.label}
+                              </button>
+                              <button type="button"
+                                onClick={() => { deleteToken(provider, st.token); setShowTokenSuggestions(false); if (token === st.token) setToken(''); }}
+                                title="Remove saved token"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', padding: '0 2px', lineHeight: 1 }}>
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div style={{ position: 'relative' }}>
+                        <input id="access-token" type={showToken ? 'text' : 'password'}
+                          className="input-field input-mono"
+                          placeholder="••••••••••••••••••••••••••••••••"
+                          value={token} onChange={e => setToken(e.target.value)}
+                          autoComplete="off" spellCheck={false} style={{ paddingRight: '44px' }} />
+                        <button type="button" aria-label={showToken ? 'Hide token' : 'Show token'}
+                          onClick={() => setShowToken(s => !s)}
+                          style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center' }}>
+                          {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                      {TOKEN_HELP[provider] && (
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', lineHeight: '1.5' }}>{TOKEN_HELP[provider]}</p>
+                      )}
+                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: '1.5', display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
+                        <span style={{ color: 'var(--accent-green)', flexShrink: 0 }}>🔒</span>
+                        Token saved only in your browser (localStorage). Never sent to any server.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Repo URL */}
                   <div style={{ marginBottom: '14px' }}>
                     <label htmlFor="repo-url" style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       Repository URL
@@ -566,6 +610,34 @@ export function HomeView({ onStartScan }: Props) {
                 </>
               )}
 
+              {/* Terms of use — compact, above button */}
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: '8px',
+                padding: '10px 12px', marginBottom: '12px',
+                background: termsAccepted ? 'rgba(110,231,183,0.05)' : 'rgba(251,191,36,0.05)',
+                border: `1px solid ${termsAccepted ? 'rgba(110,231,183,0.18)' : 'rgba(251,191,36,0.22)'}`,
+                borderRadius: '8px',
+              }}>
+                <input
+                  id="terms-accept"
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={e => setTermsAccepted(e.target.checked)}
+                  style={{ marginTop: '2px', accentColor: termsAccepted ? 'var(--accent-green)' : '#fbbf24', flexShrink: 0, cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+                  I accept the{' '}
+                  <button
+                    type="button"
+                    onClick={onShowDisclaimer}
+                    style={{ background: 'none', border: 'none', padding: '0', cursor: 'pointer', fontSize: '12px', color: 'var(--accent-amber)', textDecoration: 'underline', fontFamily: 'inherit' }}
+                  >
+                    Terms of Use
+                  </button>
+                  {' '}and confirm I have permission to scan this target.
+                </span>
+              </div>
+
               <button type="submit" className="btn-primary" disabled={!canSubmit}
                 style={{ width: '100%', fontSize: '15px', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 Start Scan <ArrowRight size={16} />
@@ -573,7 +645,7 @@ export function HomeView({ onStartScan }: Props) {
             </form>
           </div>
           <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', marginTop: '14px', lineHeight: 1.6 }}>
-            🔒 Token used only to call the provider API directly from your browser. Never sent to any server. We have no servers.
+            🔒 Token used only to call the provider API directly from your browser. Never sent to any server.
           </p>
         </div>
       </section>
@@ -857,7 +929,7 @@ export function HomeView({ onStartScan }: Props) {
 
       {/* ── Footer ── */}
       <footer style={{ borderTop: '1px solid var(--border)', padding: '24px', textAlign: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', marginBottom: '14px' }}>
           <JSRadarLogo height={28} />
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
             Free forever · No account · No backend
@@ -866,6 +938,15 @@ export function HomeView({ onStartScan }: Props) {
             Powered by retire.js · OSV.dev · corsproxy.io
           </span>
         </div>
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 auto', lineHeight: 1.7 }}>
+          Results are for informational purposes only and are not legally binding.{' '}
+          <button
+            type="button"
+            onClick={onShowDisclaimer}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'var(--accent-amber)', padding: '0', textDecoration: 'underline' }}>
+            Read the full disclaimer.
+          </button>
+        </p>
       </footer>
     </div>
   );

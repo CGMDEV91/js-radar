@@ -174,7 +174,7 @@ export function FixPanel({ finding }: Props) {
       {finding.isEol && finding.alternative && (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: 'var(--accent-amber)', fontSize: '12px' }}>
           <span>⚠</span>
-          <span>EOL — consider migrating to {finding.alternative}</span>
+          <span>EOL: consider migrating to {finding.alternative}</span>
         </div>
       )}
     </div>

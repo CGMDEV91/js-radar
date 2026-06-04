@@ -551,7 +551,7 @@ export function ResultsView({ config, findings, filesScanned, fileResults, logs,
   }
 
   const overallBadge = {
-    unknown:   { color: 'var(--text-secondary)', bg: 'rgba(136,136,170,0.08)', border: 'rgba(136,136,170,0.20)', icon: '–', text: 'NOT SCANNED' },
+    unknown:   { color: 'var(--text-secondary)', bg: 'rgba(136,136,170,0.08)', border: 'rgba(136,136,170,0.20)', icon: '?', text: 'NOT SCANNED' },
     clean:     { color: 'var(--accent-green)', bg: 'rgba(110,231,183,0.10)', border: 'rgba(110,231,183,0.25)', icon: '✓', text: 'CLEAN' },
     review:    { color: 'var(--accent-amber)', bg: 'rgba(251,191,36,0.10)', border: 'rgba(251,191,36,0.25)', icon: '⚠', text: 'REVIEW NEEDED' },
     vulnerable: { color: 'var(--accent-red)', bg: 'rgba(248,113,113,0.10)', border: 'rgba(248,113,113,0.25)', icon: '✗', text: 'VULNERABLE' },
@@ -609,7 +609,7 @@ export function ResultsView({ config, findings, filesScanned, fileResults, logs,
             <span style={{ fontSize: '16px', flexShrink: 0 }}>🛑</span>
             <div>
               <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-amber)', margin: '0 0 3px' }}>
-                Scan cancelled — partial results
+                Scan cancelled - partial results
               </p>
               <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
                 The scan was stopped before completing all phases. The findings below are from the scanners that finished. Run a full scan to get complete results.
@@ -842,7 +842,7 @@ export function ResultsView({ config, findings, filesScanned, fileResults, logs,
                 title="Authentication required"
                 body={
                   <>
-                    The server returned 401 or 403 — access to{' '}
+                    The server returned 401 or 403, access to{' '}
                     <span style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--text-primary)', wordBreak: 'break-all' }}>
                       {config.siteUrl}
                     </span>{' '}
@@ -957,6 +957,25 @@ export function ResultsView({ config, findings, filesScanned, fileResults, logs,
       >
         {filesScanned} file{filesScanned !== 1 ? 's' : ''} scanned · {findings.length} finding{findings.length !== 1 ? 's' : ''}
       </p>
+
+      {/* Disclaimer */}
+      <div style={{
+        marginTop: '24px',
+        borderTop: '1px solid var(--border)',
+        paddingTop: '16px',
+        fontSize: '11px',
+        color: 'var(--text-muted)',
+        lineHeight: 1.7,
+        textAlign: 'center',
+        maxWidth: '640px',
+        margin: '24px auto 0',
+      }}>
+        <strong style={{ color: 'var(--text-secondary)' }}>Disclaimer:</strong>{' '}
+        These results are for informational purposes only and are not legally binding. They do not
+        constitute a professional security audit. The author(s) of JSRadar accept no liability for
+        any damages arising from use of this tool or reliance on its output. Results may include
+        false positives or false negatives. Scan only targets you own or have explicit permission to test.
+      </div>
     </div>
   );
 }

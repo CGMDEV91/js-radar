@@ -3,6 +3,7 @@ import type { View, ProviderConfig, Finding, LogMessage, ScanProgress, FileResul
 import { HomeView } from './components/views/HomeView';
 import { ScanningView } from './components/views/ScanningView';
 import { ResultsView } from './components/views/ResultsView';
+import { DisclaimerView } from './components/views/DisclaimerView';
 import { runScan } from './scanners/index';
 
 const INITIAL_PROGRESS: ScanProgress = { pct: 0, phase: '' };
@@ -53,18 +54,20 @@ export default function App() {
       setFindings(result.findings);
       setFilesScanned(result.filesScanned);
       setFileResults(result.fileResults);
-      if (result.cancelled) {
-        setCancelled(true);
-      }
+      if (result.cancelled) setCancelled(true);
       setView('results');
     } catch (e) {
-      emit({ text: `❌ Scan failed: ${(e as Error).message}`, type: 'error' });
+      emit({ text: `Scan failed: ${(e as Error).message}`, type: 'error' });
       setProgress({ pct: 100, phase: 'Scan failed' });
     }
   }, []);
 
+  if (view === 'disclaimer') {
+    return <DisclaimerView onBack={() => setView('home')} />;
+  }
+
   if (view === 'home') {
-    return <HomeView onStartScan={handleStartScan} />;
+    return <HomeView onStartScan={handleStartScan} onShowDisclaimer={() => setView('disclaimer')} />;
   }
 
   if (view === 'scanning' && config) {
@@ -95,5 +98,5 @@ export default function App() {
     );
   }
 
-  return <HomeView onStartScan={handleStartScan} />;
+  return <HomeView onStartScan={handleStartScan} onShowDisclaimer={() => setView('disclaimer')} />;
 }

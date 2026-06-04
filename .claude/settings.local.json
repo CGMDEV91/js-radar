@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx tsc *)",
+      "Bash(find /home/carlos -name \"HomeView.tsx\" 2>/dev/null | head -3)",
+      "Read(///wsl.localhost/ubuntu/mnt/**)",
+      "Read(///wsl.localhost/ubuntu/home/carlos/devel/contrib-scan/**)"
+    ]
+  }
+}

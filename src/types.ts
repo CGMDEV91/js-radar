@@ -1,6 +1,6 @@
 export type Provider = 'github' | 'gitlab' | 'bitbucket' | 'publicUrl';
 
-export type View = 'home' | 'scanning' | 'results';
+export type View = 'home' | 'disclaimer' | 'scanning' | 'results';
 
 export interface ProviderConfig {
   provider: Provider;
