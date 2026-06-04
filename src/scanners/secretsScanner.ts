@@ -50,14 +50,14 @@ const FALSE_POSITIVE_HINT =
  * token rather than a real hardcoded credential, or null if no hint applies.
  */
 function getFalsePositiveHint(filePath: string, matchedLine: string): string | null {
-  const path = filePath.toLowerCase();
   const line = matchedLine.toLowerCase();
+  const lowerPath = filePath.toLowerCase();
 
   // File URL contains query parameters typical of server-side asset aggregation
-  const hasAggregationParams = /[?&](scope|delta|include|token|nonce|hash|v|ver)=/.test(filePath);
+  const hasAggregationParams = /[?&](scope|delta|include|token|nonce|hash|v|ver)=/.test(lowerPath);
 
   // Hashed filename pattern (long hex or base62 string in the filename itself)
-  const hasHashedFilename = /[a-f0-9]{16,}|[A-Za-z0-9_-]{24,}\.(js|css)/.test(filePath);
+  const hasHashedFilename = /[a-f0-9]{16,}|[a-z0-9_-]{24,}\.(js|css)/.test(lowerPath);
 
   // Match line contains encoded or compressed content indicators
   const looksEncoded =
