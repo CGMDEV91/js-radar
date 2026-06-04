@@ -74,6 +74,7 @@ async function walkDirectory(
 export async function fetchFromBitbucket(
   config: ProviderConfig,
   onProgress: (msg: string) => void,
+  onFileProgress?: (fetched: number, total: number) => void,
 ): Promise<ScannedFile[]> {
   const { workspace, repo } = parseBitbucketUrl(config.repoUrl ?? '');
 
@@ -104,6 +105,7 @@ export async function fetchFromBitbucket(
   onProgress(`📦 Found ${jsFiles.length} JavaScript files to download...`);
 
   const files: ScannedFile[] = [];
+  const total = jsFiles.length;
 
   for (let i = 0; i < jsFiles.length; i++) {
     const entry = jsFiles[i];
@@ -113,6 +115,7 @@ export async function fetchFromBitbucket(
         { headers, responseType: 'text', timeout: 15000 },
       );
       files.push({ path: entry.path, content: resp.data, fetchStatus: 'ok' });
+      onFileProgress?.(i + 1, total);
 
       if ((i + 1) % 10 === 0) {
         onProgress(`⬇ Downloaded ${i + 1}/${jsFiles.length} files...`);
@@ -120,6 +123,7 @@ export async function fetchFromBitbucket(
     } catch (e) {
       const msg = (e as Error).message;
       onProgress(`⚠ Could not fetch ${entry.path} — skipping`);
+      onFileProgress?.(i + 1, total);
       files.push({ path: entry.path, content: '', fetchStatus: 'error', fetchError: msg });
     }
   }
