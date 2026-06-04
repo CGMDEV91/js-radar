@@ -579,32 +579,32 @@ export function ResultsView({ config, findings, filesScanned, fileResults, logs,
 
       {/* Cancelled banner */}
       {cancelled && (
-        <div style={{
-          display: 'flex', alignItems: 'flex-start', gap: '10px',
-          background: 'rgba(251,191,36,0.07)', border: '1px solid rgba(251,191,36,0.25)',
-          borderRadius: '10px', padding: '14px 16px', marginBottom: '16px',
-        }}>
-          <span style={{ fontSize: '16px', flexShrink: 0 }}>🛑</span>
-          <div>
-            <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-amber)', margin: '0 0 3px' }}>
-              Scan cancelled — partial results
-            </p>
-            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
-              The scan was stopped before completing all phases. The findings below are from the scanners that finished. Run a full scan to get complete results.
-            </p>
+        <>
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: '10px',
+            background: 'rgba(251,191,36,0.07)', border: '1px solid rgba(251,191,36,0.25)',
+            borderRadius: '10px', padding: '14px 16px', marginBottom: '16px',
+          }}>
+            <span style={{ fontSize: '16px', flexShrink: 0 }}>🛑</span>
+            <div>
+              <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-amber)', margin: '0 0 3px' }}>
+                Scan cancelled — partial results
+              </p>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
+                The scan was stopped before completing all phases. The findings below are from the scanners that finished. Run a full scan to get complete results.
+              </p>
+            </div>
           </div>
-          <button
-            onClick={() => onRetry(config)}
-            style={{
-              flexShrink: 0, marginLeft: 'auto', background: 'rgba(251,191,36,0.12)',
-              border: '1px solid rgba(251,191,36,0.30)', borderRadius: '6px',
-              color: 'var(--accent-amber)', cursor: 'pointer', fontSize: '12px',
-              fontWeight: 600, padding: '5px 12px', whiteSpace: 'nowrap',
-            }}
-          >
-            ↺ Full scan
-          </button>
-        </div>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <button
+              onClick={() => onRetry(config)}
+              className="btn-primary"
+              style={{ padding: '12px 32px', fontSize: '15px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              ↺ Run full scan
+            </button>
+          </div>
+        </>
       )}
 
       {/* Scan log — top */}

@@ -107,6 +107,7 @@ export async function fetchFromPublicUrl(
   config: ProviderConfig,
   onProgress: (msg: string) => void,
   onFileProgress?: (fetched: number, total: number) => void,
+  shouldStop?: () => boolean,
 ): Promise<ScannedFile[]> {
   const siteUrl = config.siteUrl ?? '';
   const useCorsProxy = config.corsProxy ?? false;
@@ -201,6 +202,7 @@ export async function fetchFromPublicUrl(
   const total = allUrls.length;
 
   for (let idx = 0; idx < allUrls.length; idx++) {
+    if (shouldStop?.()) { onProgress('🛑 Fetch interrupted by user.'); break; }
     const url = allUrls[idx];
     const name = basename(url);
     try {

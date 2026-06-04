@@ -84,6 +84,7 @@ export async function fetchFromGitlab(
   const total = jsFiles.length;
 
   for (let i = 0; i < jsFiles.length; i++) {
+    if (shouldStop?.()) { onProgress('🛑 Fetch interrupted by user.'); break; }
     const item = jsFiles[i];
     const encodedPath = encodeURIComponent(item.path);
 

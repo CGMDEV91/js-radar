@@ -37,6 +37,7 @@ export async function fetchFromGithub(
   config: ProviderConfig,
   onProgress: (msg: string) => void,
   onFileProgress?: (fetched: number, total: number) => void,
+  shouldStop?: () => boolean,
 ): Promise<ScannedFile[]> {
   const { org, repo } = parseGithubUrl(config.repoUrl ?? '');
   const headers: Record<string, string> = {
@@ -79,6 +80,7 @@ export async function fetchFromGithub(
   const total = jsFiles.length;
 
   for (let i = 0; i < jsFiles.length; i++) {
+    if (shouldStop?.()) { onProgress('🛑 Fetch interrupted by user.'); break; }
     const item = jsFiles[i];
     if (remaining < 5) {
       onProgress(`⚠ GitHub rate limit low — stopping file download early`);

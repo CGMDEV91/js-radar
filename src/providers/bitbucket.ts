@@ -108,6 +108,7 @@ export async function fetchFromBitbucket(
   const total = jsFiles.length;
 
   for (let i = 0; i < jsFiles.length; i++) {
+    if (shouldStop?.()) { onProgress('🛑 Fetch interrupted by user.'); break; }
     const entry = jsFiles[i];
     try {
       const resp = await axios.get<string>(

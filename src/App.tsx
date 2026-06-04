@@ -55,8 +55,8 @@ export default function App() {
       setFileResults(result.fileResults);
       if (result.cancelled) {
         setCancelled(true);
-        setProgress({ pct: result.pct ?? 50, phase: 'Scan cancelled' });
       }
+      setView('results');
     } catch (e) {
       emit({ text: `❌ Scan failed: ${(e as Error).message}`, type: 'error' });
       setProgress({ pct: 100, phase: 'Scan failed' });

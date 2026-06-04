@@ -123,6 +123,7 @@ export async function runScan(
         const pct = 5 + Math.round((fetched / total) * 20); // 5% → 25%
         onProgress({ pct, phase: `Fetching files... (${fetched}/${total})` });
       },
+      shouldStop,
     );
   } catch (e) {
     const msg = (e as Error).message;
