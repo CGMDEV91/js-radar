@@ -10,13 +10,28 @@ import { enrichWithFix } from '../fixEngine';
 type ProgressFn = (progress: ScanProgress) => void;
 
 function dedup(findings: Finding[]): Finding[] {
-  const seen = new Set<string>();
-  return findings.filter((f) => {
-    const key = `${f.scanner}:${f.file}:${f.library}:${f.detectedVersion}:${f.cve.join(',')}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  // Primary key: file + library + version — same vuln detected by multiple scanners = duplicate
+  // We keep the finding with the most CVEs (usually osv.dev enriches retire.js findings)
+  const map = new Map<string, Finding>();
+
+  for (const f of findings) {
+    const key = `${f.file}:${f.library}:${f.detectedVersion}`;
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, f);
+    } else {
+      // Merge CVEs and keep the finding with higher severity or more data
+      const mergedCves = [...new Set([...existing.cve, ...f.cve])];
+      const keepExisting =
+        existing.cve.length >= f.cve.length &&
+        existing.fixVersion !== null;
+      map.set(key, keepExisting
+        ? { ...existing, cve: mergedCves }
+        : { ...f, cve: mergedCves });
+    }
+  }
+
+  return Array.from(map.values());
 }
 
 function basename(path: string): string {
@@ -100,7 +115,14 @@ export async function runScan(
 
   let files: ScannedFile[];
   try {
-    files = await fetchFiles(config, (msg) => onLog({ text: msg, type: 'info' }));
+    files = await fetchFiles(
+      config,
+      (msg) => onLog({ text: msg, type: 'info' }),
+      (fetched, total) => {
+        const pct = 5 + Math.round((fetched / total) * 20); // 5% → 25%
+        onProgress({ pct, phase: `Fetching files... (${fetched}/${total})` });
+      },
+    );
   } catch (e) {
     const msg = (e as Error).message;
     if (msg.startsWith('CORS_BLOCKED:')) {

@@ -49,6 +49,7 @@ async function fetchTree(
 export async function fetchFromGitlab(
   config: ProviderConfig,
   onProgress: (msg: string) => void,
+  onFileProgress?: (fetched: number, total: number) => void,
 ): Promise<ScannedFile[]> {
   const { projectPath } = parseGitlabUrl(config.repoUrl ?? '');
   const projectId = encodeURIComponent(projectPath);
@@ -80,6 +81,7 @@ export async function fetchFromGitlab(
   onProgress(`📦 Found ${jsFiles.length} JavaScript files to download...`);
 
   const files: ScannedFile[] = [];
+  const total = jsFiles.length;
 
   for (let i = 0; i < jsFiles.length; i++) {
     const item = jsFiles[i];
@@ -91,6 +93,7 @@ export async function fetchFromGitlab(
         { headers, responseType: 'text', timeout: 15000 },
       );
       files.push({ path: item.path, content: resp.data, fetchStatus: 'ok' });
+      onFileProgress?.(i + 1, total);
 
       if ((i + 1) % 10 === 0) {
         onProgress(`⬇ Downloaded ${i + 1}/${jsFiles.length} files...`);
@@ -102,9 +105,11 @@ export async function fetchFromGitlab(
           { headers, responseType: 'text', timeout: 15000 },
         );
         files.push({ path: item.path, content: resp.data, fetchStatus: 'ok' });
+        onFileProgress?.(i + 1, total);
       } catch (e2) {
         const msg = (e2 as Error).message;
         onProgress(`⚠ Could not fetch ${item.path} — skipping`);
+        onFileProgress?.(i + 1, total);
         files.push({ path: item.path, content: '', fetchStatus: 'error', fetchError: msg });
       }
     }

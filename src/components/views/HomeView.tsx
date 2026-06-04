@@ -212,7 +212,7 @@ const STEPS = [
   {
     n: '03',
     title: 'Read the report',
-    body: 'Severity-ranked findings with CVE links, affected file paths, and one-click fix downloads.',
+    body: 'Severity-ranked findings with CVE links, affected file paths, and direct download links to safe versions on cdnjs and jsDelivr.',
     note: 'Export for Teams / Slack',
   },
 ];

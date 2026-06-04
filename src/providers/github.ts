@@ -36,6 +36,7 @@ function isSkipped(path: string, size?: number): boolean {
 export async function fetchFromGithub(
   config: ProviderConfig,
   onProgress: (msg: string) => void,
+  onFileProgress?: (fetched: number, total: number) => void,
 ): Promise<ScannedFile[]> {
   const { org, repo } = parseGithubUrl(config.repoUrl ?? '');
   const headers: Record<string, string> = {
@@ -75,6 +76,7 @@ export async function fetchFromGithub(
 
   const files: ScannedFile[] = [];
   let remaining = Infinity;
+  const total = jsFiles.length;
 
   for (let i = 0; i < jsFiles.length; i++) {
     const item = jsFiles[i];
@@ -100,6 +102,7 @@ export async function fetchFromGithub(
           : raw.content;
 
       files.push({ path: item.path, content, fetchStatus: 'ok' });
+      onFileProgress?.(i + 1, total);
 
       if ((i + 1) % 10 === 0) {
         onProgress(`⬇ Downloaded ${i + 1}/${jsFiles.length} files...`);
@@ -109,6 +112,7 @@ export async function fetchFromGithub(
         ? `HTTP ${e.response?.status ?? 'error'}: ${e.response?.data?.message ?? e.message}`
         : (e as Error).message;
       onProgress(`⚠ Could not fetch ${item.path} — ${msg}`);
+      onFileProgress?.(i + 1, total);
       files.push({ path: item.path, content: '', fetchStatus: 'error', fetchError: msg });
     }
   }

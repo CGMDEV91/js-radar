@@ -106,6 +106,7 @@ async function tryFetch(
 export async function fetchFromPublicUrl(
   config: ProviderConfig,
   onProgress: (msg: string) => void,
+  onFileProgress?: (fetched: number, total: number) => void,
 ): Promise<ScannedFile[]> {
   const siteUrl = config.siteUrl ?? '';
   const useCorsProxy = config.corsProxy ?? false;
@@ -197,12 +198,15 @@ export async function fetchFromPublicUrl(
   let okCount = 0;
   let corsCount = 0;
   let errCount = 0;
+  const total = allUrls.length;
 
-  for (const url of allUrls) {
+  for (let idx = 0; idx < allUrls.length; idx++) {
+    const url = allUrls[idx];
     const name = basename(url);
     try {
       const { content, proxied, proxyName } = await tryFetch(url, useCorsProxy, onProgress);
       okCount++;
+      onFileProgress?.(idx + 1, total);
       onProgress(
         proxied
           ? `🔁 [${proxyName}] ${name}`
@@ -221,6 +225,7 @@ export async function fetchFromPublicUrl(
         msg.toLowerCase().includes('cors') ||
         msg.toLowerCase().includes('network');
 
+      onFileProgress?.(idx + 1, total);
       if (isCors && !useCorsProxy) {
         corsCount++;
         onProgress(`🚫 CORS blocked: ${name}`);

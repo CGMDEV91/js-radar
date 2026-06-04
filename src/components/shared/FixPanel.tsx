@@ -34,6 +34,7 @@ export function FixPanel({ finding }: Props) {
               href={finding.downloadUrls.cdnjs}
               target="_blank"
               rel="noopener noreferrer"
+              download
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -58,6 +59,7 @@ export function FixPanel({ finding }: Props) {
               href={finding.downloadUrls.jsdelivr}
               target="_blank"
               rel="noopener noreferrer"
+              download
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

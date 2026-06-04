@@ -317,6 +317,163 @@ function FileResultsTable({ fileResults }: { fileResults: FileResult[] }) {
   );
 }
 
+function UpgradesSection({ findings }: { findings: Finding[] }) {
+  // Collect unique upgrades: one entry per library+fixVersion combination
+  const upgradeMap = new Map<string, {
+    library: string;
+    fromVersions: string[];
+    fixVersion: string;
+    cdnjs?: string;
+    jsdelivr?: string;
+  }>();
+
+  for (const f of findings) {
+    if (!f.fixVersion) continue;
+    const key = `${f.library.toLowerCase()}@${f.fixVersion}`;
+    const existing = upgradeMap.get(key);
+    if (existing) {
+      if (!existing.fromVersions.includes(f.detectedVersion)) {
+        existing.fromVersions.push(f.detectedVersion);
+      }
+    } else {
+      upgradeMap.set(key, {
+        library: f.library,
+        fromVersions: f.detectedVersion ? [f.detectedVersion] : [],
+        fixVersion: f.fixVersion,
+        cdnjs: f.downloadUrls.cdnjs,
+        jsdelivr: f.downloadUrls.jsdelivr,
+      });
+    }
+  }
+
+  const upgrades = Array.from(upgradeMap.values());
+  if (upgrades.length === 0) return null;
+
+  return (
+    <div style={{ marginTop: '32px' }}>
+      <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
+          Recommended upgrades
+        </span>
+        <span style={{
+          fontSize: '11px',
+          background: 'rgba(110,231,183,0.10)',
+          border: '1px solid rgba(110,231,183,0.25)',
+          color: 'var(--accent-green)',
+          borderRadius: '4px',
+          padding: '1px 7px',
+          fontWeight: 600,
+        }}>
+          {upgrades.length} {upgrades.length === 1 ? 'library' : 'libraries'}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {upgrades.map((u, i) => (
+          <div key={i} style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr auto',
+            gap: '12px',
+            alignItems: 'center',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '10px',
+            padding: '14px 16px',
+          }}>
+            {/* Left: library info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', minWidth: 0 }}>
+              <span style={{
+                fontFamily: 'IBM Plex Mono, monospace',
+                fontSize: '14px',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                flexShrink: 0,
+              }}>
+                {u.library}
+              </span>
+              {u.fromVersions.length > 0 && (
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>
+                  {u.fromVersions.join(', ')}
+                </span>
+              )}
+              <span style={{ color: 'var(--text-muted)', fontSize: '12px', flexShrink: 0 }}>→</span>
+              <span style={{
+                fontFamily: 'IBM Plex Mono, monospace',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: 'var(--accent-green)',
+                flexShrink: 0,
+              }}>
+                {u.fixVersion}
+              </span>
+            </div>
+
+            {/* Right: download buttons */}
+            <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+              {u.cdnjs && (
+                <a
+                  href={u.cdnjs}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  title={`Download ${u.library} ${u.fixVersion} from cdnjs`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '6px 12px',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    color: 'var(--text-secondary)',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    textDecoration: 'none',
+                    transition: 'border-color 150ms ease, color 150ms ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-green)'; e.currentTarget.style.color = 'var(--accent-green)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                >
+                  ↓ cdnjs
+                </a>
+              )}
+              {u.jsdelivr && (
+                <a
+                  href={u.jsdelivr}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  title={`Download ${u.library} ${u.fixVersion} from jsDelivr`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '6px 12px',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    color: 'var(--text-secondary)',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    textDecoration: 'none',
+                    transition: 'border-color 150ms ease, color 150ms ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; e.currentTarget.style.color = 'var(--accent-blue)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                >
+                  ↓ jsDelivr
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ResultsView({ config, findings, filesScanned, fileResults, logs, onScanAnother, onRetry }: Props) {
   const [copied, setCopied] = useState(false);
   const [filter, setFilter] = useState<SeverityFilter>('all');
@@ -735,6 +892,8 @@ export function ResultsView({ config, findings, filesScanned, fileResults, logs,
           )}
         </div>
       )}
+
+      <UpgradesSection findings={findings} />
 
       <p
         style={{
