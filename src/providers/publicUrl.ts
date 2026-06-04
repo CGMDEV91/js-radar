@@ -12,6 +12,18 @@ const PROXY_BUILDERS: Array<{ name: string; build: (u: string) => string }> = [
     name: 'allorigins.win',
     build: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   },
+  {
+    name: 'codetabs.com',
+    build: (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+  },
+  {
+    name: 'thingproxy',
+    build: (u) => `https://thingproxy.freeboard.io/fetch/${u}`,
+  },
+  {
+    name: 'htmldriven',
+    build: (u) => `https://cors-proxy.htmldriven.com/?url=${encodeURIComponent(u)}`,
+  },
 ];
 
 function resolveUrl(src: string, baseUrl: string): string {
@@ -67,7 +79,7 @@ async function tryFetch(
       if (!resp.ok) {
         lastErr = new Error(classifyHttpError(resp.status, proxy.name));
         // On these codes, try the next proxy instead of giving up
-        if (resp.status === 400 || resp.status === 408 || resp.status === 413) continue;
+        if ([400, 403, 408, 413, 429, 500, 502, 503, 504].includes(resp.status)) continue;
         throw lastErr;
       }
       return { content: await resp.text(), proxied: true, proxyName: proxy.name };
