@@ -75,6 +75,7 @@ export async function fetchFromBitbucket(
   config: ProviderConfig,
   onProgress: (msg: string) => void,
   onFileProgress?: (fetched: number, total: number) => void,
+  shouldStop?: () => boolean,
 ): Promise<ScannedFile[]> {
   const { workspace, repo } = parseBitbucketUrl(config.repoUrl ?? '');
 

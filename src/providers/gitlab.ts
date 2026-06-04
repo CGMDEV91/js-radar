@@ -50,6 +50,7 @@ export async function fetchFromGitlab(
   config: ProviderConfig,
   onProgress: (msg: string) => void,
   onFileProgress?: (fetched: number, total: number) => void,
+  shouldStop?: () => boolean,
 ): Promise<ScannedFile[]> {
   const { projectPath } = parseGitlabUrl(config.repoUrl ?? '');
   const projectId = encodeURIComponent(projectPath);
