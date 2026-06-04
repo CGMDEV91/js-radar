@@ -1,6 +1,53 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Finding, ProviderConfig, FileResult, LogMessage } from '../../types';
+
+type DlState = 'idle' | 'loading' | 'done' | 'error';
+
+async function fetchText(url: string): Promise<string> {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return resp.text();
+}
+
+async function doDownload(url: string, filename: string, setState: (s: DlState) => void) {
+  setState('loading');
+  try {
+    const text = await fetchText(url);
+    const blob = new Blob([text], { type: 'application/javascript' });
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(objectUrl);
+    setState('done');
+  } catch { setState('error'); }
+  setTimeout(() => setState('idle'), 2500);
+}
+
+async function doCopy(url: string, setState: (s: DlState) => void) {
+  setState('loading');
+  try {
+    const text = await fetchText(url);
+    await navigator.clipboard.writeText(text);
+    setState('done');
+  } catch { setState('error'); }
+  setTimeout(() => setState('idle'), 2500);
+}
+
+async function doViewSource(url: string, filename: string, setState: (s: DlState) => void) {
+  setState('loading');
+  try {
+    const text = await fetchText(url);
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(`<html><head><title>${filename}</title><style>body{margin:0;background:#0a0a0f;color:#e8e8f0;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.6;padding:20px;white-space:pre-wrap;word-break:break-all}</style></head><body>${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</body></html>`);
+      win.document.close();
+    }
+    setState('done');
+  } catch { setState('error'); }
+  setTimeout(() => setState('idle'), 2500);
+}
 import { SeverityBadge } from '../shared/SeverityBadge';
 import { FindingCard } from '../shared/FindingCard';
 import { generateTeamsReport } from '../../utils/export';
@@ -318,6 +365,34 @@ function FileResultsTable({ fileResults }: { fileResults: FileResult[] }) {
   );
 }
 
+function UpgradeBtn({ idleLabel, doneLabel = '✓', accent, onClick }: {
+  idleLabel: string; doneLabel?: string; accent: string;
+  onClick: (s: (v: DlState) => void) => Promise<void>;
+}) {
+  const [state, setState] = useState<DlState>('idle');
+  const text = state === 'loading' ? '...' : state === 'done' ? doneLabel : state === 'error' ? '✗' : idleLabel;
+  const color = state === 'done' ? 'var(--accent-green)' : state === 'error' ? 'var(--accent-red)' : 'var(--text-secondary)';
+  const border = state === 'done' ? 'rgba(110,231,183,0.4)' : state === 'error' ? 'rgba(248,113,113,0.4)' : 'var(--border)';
+  return (
+    <button type="button" disabled={state === 'loading'} onClick={() => onClick(setState)}
+      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '5px 10px', background: 'var(--bg-elevated)', border: `1px solid ${border}`, borderRadius: '6px', color, fontSize: '12px', cursor: state === 'loading' ? 'wait' : 'pointer', transition: 'border-color 150ms, color 150ms', fontFamily: 'inherit', minWidth: '76px', whiteSpace: 'nowrap' }}
+      onMouseEnter={(e) => { if (state === 'idle') { e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; } }}
+      onMouseLeave={(e) => { if (state === 'idle') { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+    >{text}</button>
+  );
+}
+
+function UpgradeActionGroup({ url, label, filename }: { url: string; label: string; filename: string }) {
+  return (
+    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+      <span style={{ fontSize: '11px', color: 'var(--text-muted)', minWidth: '48px' }}>{label}</span>
+      <UpgradeBtn idleLabel="↓ download" doneLabel="✓ saved" accent="var(--accent-green)" onClick={(s) => doDownload(url, filename, s)} />
+      <UpgradeBtn idleLabel="⎘ copy" doneLabel="✓ copied" accent="var(--accent-blue)" onClick={(s) => doCopy(url, s)} />
+      <UpgradeBtn idleLabel="</> view" doneLabel="✓ opened" accent="var(--accent-purple)" onClick={(s) => doViewSource(url, filename, s)} />
+    </div>
+  );
+}
+
 function UpgradesSection({ findings }: { findings: Finding[] }) {
   // Collect unique upgrades: one entry per library+fixVersion combination
   const upgradeMap = new Map<string, {
@@ -409,64 +484,10 @@ function UpgradesSection({ findings }: { findings: Finding[] }) {
               </span>
             </div>
 
-            {/* Right: download buttons */}
-            <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-              {u.cdnjs && (
-                <a
-                  href={u.cdnjs}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download
-                  title={`Download ${u.library} ${u.fixVersion} from cdnjs`}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    padding: '6px 12px',
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '6px',
-                    color: 'var(--text-secondary)',
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    textDecoration: 'none',
-                    transition: 'border-color 150ms ease, color 150ms ease',
-                    whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-green)'; e.currentTarget.style.color = 'var(--accent-green)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-                >
-                  ↓ cdnjs
-                </a>
-              )}
-              {u.jsdelivr && (
-                <a
-                  href={u.jsdelivr}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download
-                  title={`Download ${u.library} ${u.fixVersion} from jsDelivr`}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    padding: '6px 12px',
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '6px',
-                    color: 'var(--text-secondary)',
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    textDecoration: 'none',
-                    transition: 'border-color 150ms ease, color 150ms ease',
-                    whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; e.currentTarget.style.color = 'var(--accent-blue)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-                >
-                  ↓ jsDelivr
-                </a>
-              )}
+            {/* Right: action groups */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+              {u.cdnjs && <UpgradeActionGroup url={u.cdnjs} label="cdnjs" filename={`${u.library.toLowerCase()}-${u.fixVersion}.min.js`} />}
+              {u.jsdelivr && <UpgradeActionGroup url={u.jsdelivr} label="jsDelivr" filename={`${u.library.toLowerCase()}-${u.fixVersion}.min.js`} />}
             </div>
           </div>
         ))}
