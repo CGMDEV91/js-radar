@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "vuln-scanner",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "source /home/carlos/.nvm/nvm.sh && npm run dev -- --port 5173"],
+      "port": 5173
+    }
+  ]
+}
